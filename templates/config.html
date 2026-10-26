@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>参数配置中心</title>
+    <style>
+        body { background-color: #E6E1D2; font-family: -apple-system, sans-serif; display: flex; justify-content: center; padding: 40px 0; margin: 0; }
+        .card { background: #F6F4EB; width: 650px; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px dashed #DCD7C8; padding-bottom: 16px;}
+        .header h2 { margin: 0; font-size: 18px; color: #333; }
+        .btn-back { background: #7B99EF; color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
+        .form-group { margin-bottom: 16px; background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #E8E3D5; }
+        label { display: block; font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .help-text { font-size: 12px; color: #888; margin-bottom: 8px; }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; background: #F8F9FA; border: 1px solid #DCD7C8; border-radius: 6px; padding: 10px; font-size: 14px; box-sizing: border-box; outline: none; }
+        input:focus, textarea:focus { border-color: #7B99EF; }
+        .btn-submit { width: 100%; background: #689E79; color: white; border: none; border-radius: 8px; padding: 14px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="card" id="config-card">
+    <div class="header">
+        <h2>⚙️ 核心参数配置</h2>
+        <a href="/" class="btn-back">返回</a>
+    </div>
+
+    <!-- 基础配置 -->
+    <div class="form-group">
+        <label>亲友访问密码</label>
+        <div class="help-text">供外部人员使用首页提取功能的密码</div>
+        <input type="text" id="client_password">
+    </div>
+    
+    <div class="form-group">
+        <label>百度网盘 Cookie</label>
+        <div class="help-text">必填。包含 BDUSS 和 STOKEN 的完整字符串</div>
+        <textarea id="cookie" rows="3"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>转存目录</label>
+        <div class="help-text">转存到网盘的目录</div>
+        <input type="text" id="save_dir">
+    </div>
+
+    <!-- OpenList 配置 -->
+    <div class="form-group">
+        <label>OpenList 地址</label>
+        <div class="help-text">用于获取下载直链</div>
+        <input type="text" id="openlist_url">
+    </div>
+    <div class="form-group" style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+            <label>OpenList 用户名</label>
+            <input type="text" id="openlist_user">
+        </div>
+        <div style="flex: 1;">
+            <label>OpenList 密码</label>
+            <input type="text" id="openlist_pwd">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>OpenList 百度网盘挂载路径</label>
+        <input type="text" id="openlist_mount">
+    </div>
+
+    <!-- 其他行为配置 -->
+    <div class="form-group">
+        <label>文件保留时长(小时)</label>
+        <input type="number" id="retention_hours">
+    </div>
+    <div class="form-group">
+        <label>推送模式</label>
+        <select id="push_mode">
+            <option value="只提取直链">只提取直链</option>
+            <option value="直接推送到下载器">直接推送到下载器</option>
+        </select>
+    </div>
+
+    <!-- Motrix 配置 -->
+    <div class="form-group">
+        <label>Motrix RPC 地址</label>
+        <input type="text" id="motrix_rpc_url">
+    </div>
+    <div class="form-group">
+        <label>Motrix RPC 密钥</label>
+        <input type="text" id="motrix_rpc_secret">
+    </div>
+
+    <button class="btn-submit" onclick="saveConfig()">保存所有配置</button>
+</div>
+
+<script>
+    let adminPwd = "";
+
+    window.onload = async () => {
+        adminPwd = prompt("请输入后台管理员密码：");
+        if (!adminPwd) return window.location.href = "/";
+
+        const res = await fetch('/api/config/get', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ admin_pwd: adminPwd })
+        });
+        const json = await res.json();
+
+        if (!json.success) {
+            alert(json.message);
+            window.location.href = "/";
+            return;
+        }
+
+        document.getElementById('config-card').style.display = 'block';
+        const data = json.data;
+        
+        // 填充表单
+        document.getElementById('client_password').value = data.client_password || "";
+        document.getElementById('cookie').value = data.cookie || "";
+        document.getElementById('save_dir').value = data.save_dir || "";
+        document.getElementById('openlist_url').value = data.openlist_url || "";
+        document.getElementById('openlist_user').value = data.openlist_user || "";
+        document.getElementById('openlist_pwd').value = data.openlist_pwd || "";
+        document.getElementById('openlist_mount').value = data.openlist_mount || "";
+        document.getElementById('retention_hours').value = data.retention_hours || 24;
+        document.getElementById('push_mode').value = data.push_mode || "只提取直链";
+        document.getElementById('motrix_rpc_url').value = data.motrix_rpc_url || "";
+        document.getElementById('motrix_rpc_secret').value = data.motrix_rpc_secret || "";
+    };
+
+    async function saveConfig() {
+        const btn = document.querySelector('.btn-submit');
+        btn.innerText = "保存中...";
+        
+        const configData = {
+            client_password: document.getElementById('client_password').value,
+            cookie: document.getElementById('cookie').value,
+            save_dir: document.getElementById('save_dir').value,
+            openlist_url: document.getElementById('openlist_url').value,
+            openlist_user: document.getElementById('openlist_user').value,
+            openlist_pwd: document.getElementById('openlist_pwd').value,
+            openlist_mount: document.getElementById('openlist_mount').value,
+            retention_hours: parseInt(document.getElementById('retention_hours').value),
+            push_mode: document.getElementById('push_mode').value,
+            motrix_rpc_url: document.getElementById('motrix_rpc_url').value,
+            motrix_rpc_secret: document.getElementById('motrix_rpc_secret').value
+        };
+
+        const res = await fetch('/api/config/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                admin_pwd: adminPwd,
+                config_data: configData
+            })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            btn.innerText = "保存成功！";
+            setTimeout(() => btn.innerText = "保存所有配置", 2000);
+        } else {
+            alert(json.message);
+            btn.innerText = "保存所有配置";
+        }
+    }
+</script>
+</body>
+</html>

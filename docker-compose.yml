@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  baidu-parser:
+    build: .
+    container_name: baidu_parser
+    restart: always
+    ports:
+      - "8002:8002"  # 左侧宿主机端口可根据宝塔或 Nginx 代理需求自行修改
+    volumes:
+      - ./config.json:/app/config.json

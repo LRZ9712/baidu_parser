@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百度网盘直链全速下载</title>
+    <style>
+        body { background-color: #E6E1D2; font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #F6F4EB; width: 600px; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative; max-height: 90vh; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .left-controls { display: flex; align-items: center; gap: 12px; }
+        .pwd-input { background: #E8E3D5; border: 1px solid transparent; border-radius: 20px; padding: 6px 12px; font-size: 13px; width: 140px; outline: none; transition: 0.2s; }
+        .pwd-input:focus { background: #fff; border-color: #7B99EF; }
+        .btn-config { background: #FAEAE8; color: #C4594A; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
+        .title-area { text-align: center; margin-bottom: 20px; }
+        .title-area h2 { margin: 0 0 8px 0; font-size: 22px; color: #333; }
+        .tags { display: flex; justify-content: center; gap: 10px; font-size: 12px; }
+        .tag-green { color: #5B9C72; background: #EAF5ED; padding: 4px 8px; border-radius: 4px; }
+        .tag-yellow { color: #A48439; background: #FDF6E3; padding: 4px 8px; border-radius: 4px; }
+        
+        /* 输入区 */
+        #input-section { transition: opacity 0.3s; }
+        textarea { width: 100%; height: 120px; background: #E8E3D5; border: 1px solid transparent; border-radius: 8px; padding: 12px; font-size: 14px; outline: none; box-sizing: border-box; resize: none; transition: 0.2s; }
+        textarea:focus { background: #fff; border-color: #7B99EF; }
+        .btn-submit { width: 100%; background: #7B99EF; color: white; border: none; border-radius: 8px; padding: 14px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 16px; }
+        
+        /* 结果区：文件树 */
+        #result-section { display: none; }
+        .tree-container { background: #E8E3D5; border-radius: 8px; padding: 16px; margin-top: 16px; max-height: 350px; overflow-y: auto; }
+        .tree-ul { list-style: none; padding-left: 20px; margin: 0; }
+        .tree-root { padding-left: 0; }
+        .tree-node { margin-bottom: 4px; }
+        .folder-row { cursor: pointer; font-weight: bold; color: #444; display: flex; align-items: center; gap: 6px; padding: 4px 0; user-select: none; }
+        .folder-row:hover { color: #7B99EF; }
+        .file-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #DCD7C8; margin-left: 8px; }
+        .file-row:last-child { border-bottom: none; }
+        .file-info { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #333; word-break: break-all; }
+        .file-size { font-size: 12px; color: #888; white-space: nowrap; }
+        .btn-dl { background: #689E79; color: white; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .btn-dl:hover { background: #5B9C72; box-shadow: 0 2px 6px rgba(91, 156, 114, 0.3); }
+        .btn-reset { width: 100%; background: #DCD7C8; color: #555; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <div class="left-controls">
+            <input type="password" id="password" class="pwd-input" placeholder="输入使用密码" onchange="savePwd()">
+        </div>
+        <a href="/config" class="btn-config">⚙️ 后台管理</a>
+    </div>
+    
+    <div class="title-area">
+        <h2>百度网盘直链提取端</h2>
+        <div class="tags">
+            <span class="tag-green">🚀 随便改不知道写啥</span>
+            <span class="tag-yellow">⚡ 满速下载</span>
+        </div>
+    </div>
+
+    <!-- 输入模式 -->
+    <div id="input-section">
+        <textarea id="share-link" placeholder="请在此粘贴带有文件夹或单文件的百度网盘分享链接...一定要是输入提取码之后显示文件内容后的链接..."></textarea>
+        <button class="btn-submit" onclick="parseLink()">解析提取目录</button>
+    </div>
+
+    <!-- 文件树模式 -->
+    <div id="result-section">
+        <div style="font-size: 15px; font-weight: bold; color: #333; text-align: center;">✅ 解析成功，请点击对应文件下载</div>
+        <div class="tree-container" id="tree-container">
+            <!-- JS 动态渲染树 -->
+        </div>
+        <button class="btn-reset" onclick="resetUI()">解析其他链接</button>
+    </div>
+</div>
+
+<script>
+    window.onload = () => {
+        const pwd = localStorage.getItem('baidu_app_pwd');
+        if (pwd) document.getElementById('password').value = pwd;
+    };
+
+    function savePwd() {
+        const pwd = document.getElementById('password').value;
+        if(pwd) localStorage.setItem('baidu_app_pwd', pwd);
+    }
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function resetUI() {
+        document.getElementById('result-section').style.display = 'none';
+        document.getElementById('input-section').style.display = 'block';
+        document.getElementById('share-link').value = '';
+    }
+
+    // 核心渲染函数：把路径列表变成嵌套的 HTML
+    function renderTree(files) {
+        // 1. 构建 JSON 树结构
+        const tree = {};
+        files.forEach(f => {
+            const parts = f.path.split('/');
+            let current = tree;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!current[parts[i]]) current[parts[i]] = { type: 'folder', children: {}, open: true };
+                current = current[parts[i]].children;
+            }
+            current[parts[parts.length - 1]] = { type: 'file', data: f };
+        });
+
+        // 2. 递归生成 HTML
+        function buildHTML(nodeObj, isRoot = false) {
+            let html = `<ul class="tree-ul ${isRoot ? 'tree-root' : ''}">`;
+            for (const key in nodeObj) {
+                const node = nodeObj[key];
+                if (node.type === 'folder') {
+                    html += `
+                        <li class="tree-node">
+                            <div class="folder-row" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                📂 ${key}
+                            </div>
+                            <div style="display: block;">
+                                ${buildHTML(node.children)}
+                            </div>
+                        </li>
+                    `;
+                } else {
+                    const f = node.data;
+                    html += `
+                        <li class="file-row">
+                            <div class="file-info">
+                                📄 <span>${key}</span> <span class="file-size">(${formatSize(f.size)})</span>
+                            </div>
+                            <a href="${f.dlink}" class="btn-dl" target="_blank" rel="noopener noreferrer">↓ 下载</a>
+                        </li>
+                    `;
+                }
+            }
+            html += `</ul>`;
+            return html;
+        }
+
+        const container = document.getElementById('tree-container');
+        container.innerHTML = buildHTML(tree, true);
+    }
+
+    async function parseLink() {
+        const pwd = document.getElementById('password').value;
+        const link = document.getElementById('share-link').value;
+        if(!pwd || !link) return alert("请填写密码和网盘链接");
+
+        const btn = document.querySelector('.btn-submit');
+        btn.innerText = "提取中，请耐心等待..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/parse', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password: pwd, link: link })
+            });
+            const data = await res.json();
+            
+            if(data.success && data.files) {
+                renderTree(data.files);
+                document.getElementById('input-section').style.display = 'none';
+                document.getElementById('result-section').style.display = 'block';
+            } else {
+                alert(data.message || "提取失败");
+            }
+        } catch (e) {
+            alert("请求失败，请检查后端状态");
+        } finally {
+            btn.innerText = "解析提取目录"; btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
