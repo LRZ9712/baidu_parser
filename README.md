@@ -10,30 +10,6 @@
 - **容器化部署**：提供完整 Dockerfile 与 Compose 配置，一键启动，开箱即用。
 - **安全隔离**：配置页与使用页分离，独立管理员密码保护核心参数。
 
-## 📂 提交到 GitHub 注意事项
-
-为了保护你的服务器安全和网盘隐私，**请务必注意不要上传私密文件**。
-
-**✅ 需要上传的文件：**
-- `main.py`
-- `requirements.txt`
-- `Dockerfile`
-- `docker-compose.yml`
-- `templates/index.html`
-- `templates/config.html`
-- `README.md`
-- `.gitignore` (极其重要)
-
-**❌ 绝对不能上传的文件：**
-- `config.json` （包含你的后台密码和 Cookie，泄露会导致网盘被盗用）
-- `__pycache__/` 文件夹
-
-建议在项目根目录创建 `.gitignore` 文件并填入以下内容：
-```text
-config.json
-__pycache__/
-*.py[cod]
-```
 
 ## 📦 快速部署
 
