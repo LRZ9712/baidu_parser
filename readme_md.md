@@ -1,0 +1,91 @@
+# 百度网盘直链提取 Web 端 (Baidu Pan Direct Link Extractor)
+
+基于 FastAPI 和 Docker 构建的轻量化百度网盘直链提取工具。提供极简的 Web UI，支持解析包含多文件/多文件夹的复杂分享链接，并自动渲染为可视化的文件树结构，供用户点击按需下载。
+
+## ✨ 核心特性
+
+- **前后端分离**：极简 Web UI，支持文件树层级展示，界面优雅。
+- **免客户端下载**：提取带签名的真实直链，直接调用浏览器或 IDM/Motrix 满速下载。
+- **自动转存机制**：绕过防盗链，后台自动将分享文件转存至自身网盘后再提取。
+- **容器化部署**：提供完整 Dockerfile 与 Compose 配置，一键启动，开箱即用。
+- **安全隔离**：配置页与使用页分离，独立管理员密码保护核心参数。
+
+## 📂 提交到 GitHub 注意事项
+
+为了保护你的服务器安全和网盘隐私，**请务必注意不要上传私密文件**。
+
+**✅ 需要上传的文件：**
+- `main.py`
+- `requirements.txt`
+- `Dockerfile`
+- `docker-compose.yml`
+- `templates/index.html`
+- `templates/config.html`
+- `README.md`
+- `.gitignore` (极其重要)
+
+**❌ 绝对不能上传的文件：**
+- `config.json` （包含你的后台密码和 Cookie，泄露会导致网盘被盗用）
+- `__pycache__/` 文件夹
+
+建议在项目根目录创建 `.gitignore` 文件并填入以下内容：
+```text
+config.json
+__pycache__/
+*.py[cod]
+```
+
+## 📦 快速部署
+
+环境要求：已安装 `Docker` 和 `Docker Compose`。
+
+1. **克隆项目**
+   ```bash
+   git clone https://github.com/你的用户名/你的仓库名.git
+   cd 你的仓库名
+   ```
+
+2. **初始化配置文件**
+   在启动容器前，必须手动在宿主机创建一个空的 `config.json`，防止 Docker 将其误认为目录挂载。
+   ```bash
+   echo "{}" > config.json
+   ```
+
+3. **一键构建与启动**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+4. **访问服务**
+   启动成功后，浏览器访问 `http://服务器IP:8002`（端口可在 docker-compose.yml 中修改）。
+   进入页面后点击右上角 **⚙️ 后台管理**，初始默认密码为 `9712ymym`，进入后请立即修改并保存。
+
+## ⚙️ 核心参数配置指南
+
+在后台管理页面中，你需要填入核心的 API 信息和百度网盘 Cookie 才能正常工作。
+
+### 1. 抓取百度网盘 Cookie (BDUSS & STOKEN)
+程序需要通过 Cookie 模拟你的账号进行转存和直链获取。
+
+**抓取步骤：**
+1. 建议使用电脑端 Chrome 或 Edge 浏览器，打开一个**无痕/隐私窗口**。
+2. 访问 [百度网盘网页版 (pan.baidu.com)](https://pan.baidu.com) 并登录你的账号。
+3. 登录成功后，按下键盘 `F12` 打开开发者工具，切换到 **Network (网络)** 选项卡。
+4. 刷新当前网页（按下 `F5`）。
+5. 在 Network 面板的请求列表中，随便点击一个以 `main` 或 `list` 开头的请求。
+6. 在右侧面板中找到 **Request Headers (请求标头)**。
+7. 找到 `Cookie:` 这一行，右键复制其后面的**所有长串内容**。
+8. 将复制的内容完整粘贴到本程序的后台配置页【百度网盘 Cookie】输入框中。
+
+> **⚠️ 注意**：Cookie 包含你账号的最高权限凭证，请绝对保密！如果你的账号在其他地方重新登录或修改密码，Cookie 可能会失效，需要重新抓取。
+
+### 2. 配置 OpenList 凭据
+本程序依赖 OpenList 签发带 access_token 的官方下载直链。
+- **OpenList 地址**：填写你部署的 OpenList 完整 URL（如 `http://156.xxx.xxx.xxx:5244`）。
+- **账号/密码**：OpenList 的管理员账号与密码。
+
+### 3. 设置转存目录
+- 默认转存目录为 `/来自Bot`。当别人输入分享链接时，程序会先自动将文件转存到你百度网盘的这个目录下，请确保该目录名称不要随意更改，或与后台配置保持一致。
+
+## ⚠️ 安全声明
+本程序仅供个人学习与技术研究使用。请严格配置 `.gitignore`，切勿将生成的 `config.json` 提交到公开的 Git 仓库中。
